@@ -1,0 +1,5 @@
+node_modules
+.env
+.contentfulrc.json
+dist
+package-lock.json
