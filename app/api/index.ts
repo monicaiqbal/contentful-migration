@@ -51,21 +51,23 @@ export async function get_content_by_type_id(id, envID) {
 export async function getAllContentTypes() {
   return read.getContentTypes({ limit: 1000 })
     .then(res => res.items)
-  .catch(e => console.error('getAllContentTypes - ERROR::', e));
+    .catch(e => console.error('getAllContentTypes - ERROR::', e));
 }
 
 export async function getContentTypeById(id: string): Promise<ApplicationReturnObject> {
   return read.getContentType(id)
   .then(res => handleRequestSuccess(res))
-  .catch(e => handleRequestError(e));
+  .catch(e => handleRequestError(e, 'getAllContentTypes'));
 }
 
 export async function getEditerInterfaceById(id: string, env: string): Promise<ApplicationReturnObject> {
   return manage.getSpace(process.env.SPACE)
   .then((space) => space.getEnvironment(env))
+  .catch(e => handleRequestError(e, 'getEditerInterfaceById -- SPACE'))
   .then((environment) => environment.getEditorInterfaceForContentType(id))
+  .catch(e => handleRequestError(e, 'getEditerInterfaceById -- ENV'))
   .then(res => handleRequestSuccess(res))
-  .catch(e => handleRequestError(e));
+  .catch(e => handleRequestError(e, 'getEditerInterfaceById'));
 }
 
 export function getContentControlSettings(controlItem: EditorInterfaceControlItem): any {
@@ -98,6 +100,7 @@ export async function putContentWithTypeId(id: string, env: string, content: any
   });
 }
 
+// create new content entries, but WILL NOT publish them
 export async function createNewContentTypeWithId(id: string, env: string, content: any): Promise<boolean> {
   return manage.getSpace(process.env.SPACE)
   .then((space) => space.getEnvironment(env))
@@ -121,10 +124,13 @@ export async function updateContentControlsByContentId(id: string, env: string, 
   .then((space) => space.getEnvironment(env))
   .then((environment) => environment.getEditorInterfaceForContentType(id))
   .then((editorInterface) => {
+    logger.log(`${id} controls: `, editorInterface.controls)
+    logger.log(`Being updated to: `, content)
     editorInterface.controls = content;
-    return editorInterface.update()
+    return editorInterface;
   })
   .then(res => {
+    res.update()
     logger.color('green').log(`Successfully updated help text in fields for ${id} in ${env}`);
     return true;
   })
@@ -134,12 +140,28 @@ export async function updateContentControlsByContentId(id: string, env: string, 
   });
 }
 
-export async function getContentEntries(content_type) {
-  // return read.getEntries({
-  //   content_type,
-  //   limit: 500
-  // })
-  // .catch(e => console.error('GetContentEntries - ERROR::', e))
+export async function getContentEntries(content_type: string): Promise<ApplicationReturnObject> {
+  return read.getEntries({
+    content_type,
+    limit: 500
+  })
+  .catch(e => handleRequestError(e, 'getContentEntries -- immediate'))
+  .then(res => handleRequestSuccess(res))
+  .catch(e => handleRequestError(e, 'getContentEntries'));
+}
+
+export async function createNewContentEntryWithContentId(id: string, env: string, entry: any): Promise<boolean> {
+  return manage.getSpace(process.env.SPACE)
+  .then((space) => space.getEnvironment(env))
+  .then((environment) => environment.createEntry(id, entry))
+  .then(res => {
+    logger.color('green').log(`Successfully created an entry for ${id} in ${env}`);
+    return true;
+  })
+  .catch(e => {
+    logger.color('red').underscore().log(`ERROR: createNewContentEntryWithContentId`, e);
+    return false;
+  });
 }
 
 function handleRequestSuccess(res: any): ApplicationReturnObject {
@@ -157,7 +179,8 @@ function handleRequestSuccess(res: any): ApplicationReturnObject {
 // ID NotFound can be safely ignored
 // return 0 if we can safely ignore this error
 // otherwise return 1 for more problematic error
-function handleRequestError(error: ContentfulReturnError): ApplicationReturnObject  {
+function handleRequestError(error: ContentfulReturnError, name: string): ApplicationReturnObject  {
+  logger.color('red').log(name, error);
   let errorObj = {
     sys: {
       error: '',

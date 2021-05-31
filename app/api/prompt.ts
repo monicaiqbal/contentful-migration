@@ -13,7 +13,7 @@ export function setup(): { contentIDs: Array<string>; migrateContent: number; } 
 
   let migrateContent = ask('Do you want to migrate the content over as well? (Y/N)');
 
-  const contentInfo = migrateContent ?
+  const contentInfo = migrateContent === 0 ?
     `and to YES to migrating content` : 
     `with NO content migration`;
   logger.log(`\n\nYou want to migrate the following Content ID's: `);
