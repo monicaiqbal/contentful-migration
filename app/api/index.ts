@@ -100,7 +100,6 @@ export async function putContentWithTypeId(id: string, env: string, content: any
   });
 }
 
-// create new content entries, but WILL NOT publish them
 export async function createNewContentTypeWithId(id: string, env: string, content: any): Promise<boolean> {
   return manage.getSpace(process.env.SPACE)
   .then((space) => space.getEnvironment(env))
@@ -150,6 +149,7 @@ export async function getContentEntries(content_type: string): Promise<Applicati
   .catch(e => handleRequestError(e, 'getContentEntries'));
 }
 
+// create new content entries, but WILL NOT publish them
 export async function createNewContentEntryWithContentId(id: string, env: string, entry: any): Promise<boolean> {
   return manage.getSpace(process.env.SPACE)
   .then((space) => space.getEnvironment(env))
